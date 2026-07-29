@@ -84,19 +84,16 @@ export default function Dashboard({ userName, userEmail }: { userName: string; u
   const searchRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
-    try {
-      const response = await fetch("/api/crm", { cache:"no-store" });
-      if (response.ok) {
-        const payload = await response.json() as CRMData;
-        if (payload.customers.length) setData(payload);
-      }
-    } catch { /* local preview uses the same realistic seed state */ }
-    finally { setLoading(false); }
+    const response = await fetch("/api/crm", { cache:"no-store" });
+    const payload = await response.json() as CRMData & { error?: string };
+    if (!response.ok) throw new Error(payload.error || "Could not load CRM data");
+    setData(payload);
+    setLoading(false);
   },[]);
 
   useEffect(() => {
     let active=true;
-    fetch("/api/crm",{cache:"no-store"}).then(response=>response.ok?response.json():null).then((payload:CRMData|null)=>{if(active&&payload?.customers.length)setData(payload);}).catch(()=>{}).finally(()=>{if(active)setLoading(false);});
+    fetch("/api/crm",{cache:"no-store"}).then(async response=>{const payload=await response.json() as CRMData & {error?:string};if(!response.ok)throw new Error(payload.error||"Could not load CRM data");if(active)setData(payload);}).catch(()=>{if(active)setNotice("Could not load the CRM database. Please try again.");}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[]);
   useEffect(() => { const frame=requestAnimationFrame(()=>{const saved=localStorage.getItem("cop-theme");setDark(saved?saved==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches);});return()=>cancelAnimationFrame(frame); },[]);
@@ -124,47 +121,44 @@ export default function Dashboard({ userName, userEmail }: { userName: string; u
   const openCustomer=(id:string)=>{setSelectedId(id);setModal("customer");};
   const openRecord=(mode:RecordMode,id=selectedId)=>{setSelectedId(id);setModal(mode);};
 
-  const post = async (payload:Record<string,unknown>, local:()=>void) => {
-    let persisted=false;
-    try { const response=await fetch("/api/crm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); persisted=response.ok; if(!response.ok){const body=await response.json() as {error?:string};if(response.status<500)throw new Error(body.error||"Could not save record");} } catch(error){ if(error instanceof Error && !error.message.includes("database")){toast(error.message);return false;} }
-    if(persisted) await loadData(); else local();
-    return true;
+  const post = async (payload:Record<string,unknown>) => {
+    try {
+      const response=await fetch("/api/crm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      const body=await response.json() as {error?:string};
+      if(!response.ok)throw new Error(body.error||"Could not save record");
+      await loadData();
+      return body.id || "saved";
+    } catch(error) {
+      toast(error instanceof Error?error.message:"Could not save record");
+      return null;
+    }
   };
 
   const addCustomer = async (event:FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form=new FormData(event.currentTarget); const id=crypto.randomUUID(); const now=new Date().toISOString();
     const customer:Customer={id,name:String(form.get("name")),email:String(form.get("email")),phone:String(form.get("phone")||""),location:String(form.get("location")||""),status:String(form.get("status")) as Status,created_at:now,updated_at:now};
-    const ok=await post({entity:"customer",...customer},()=>setData(current=>({...current,customers:[customer,...current.customers]})));
-    if(ok){setModal(null);setSelectedId(id);toast(`${customer.name} added to CRM`);}
+    const persistedId=await post({entity:"customer",...customer});
+    if(persistedId){setModal(null);setSelectedId(persistedId);toast(`${customer.name} added to CRM`);}
   };
 
   const addRecord = async (event:FormEvent<HTMLFormElement>, mode:RecordMode) => {
-    event.preventDefault(); const form=new FormData(event.currentTarget); const values=Object.fromEntries(form.entries()); const id=crypto.randomUUID(); const now=new Date().toISOString();
+    event.preventDefault(); const form=new FormData(event.currentTarget); const values=Object.fromEntries(form.entries());
     const payload={entity:mode,customerId:selectedId,...values};
-    const ok=await post(payload,()=>setData(current=>{
-      if(mode==="interaction") return {...current,interactions:[{id,customer_id:selectedId,channel:String(values.channel),summary:String(values.summary),remarks:String(values.remarks),sentiment:String(values.sentiment),happened_at:new Date(String(values.happenedAt)).toISOString(),created_by:userEmail,created_at:now},...current.interactions]};
-      if(mode==="reminder") return {...current,reminders:[{id,customer_id:selectedId,title:String(values.title),due_at:new Date(String(values.dueAt)).toISOString(),priority:String(values.priority),completed:0,completed_at:null,created_by:userEmail,created_at:now},...current.reminders]};
-      if(mode==="feedback") return {...current,feedback:[{id,customer_id:selectedId,rating:Number(values.rating),category:String(values.category),comment:String(values.comment),status:"Open",created_at:now},...current.feedback]};
-      return {...current,revenue:[{id,customer_id:selectedId,amount_pence:Math.round(Number(values.amount)*100),type:String(values.type),reference:String(values.reference),note:String(values.note),occurred_at:new Date(String(values.occurredAt)).toISOString(),created_at:now},...current.revenue]};
-    }));
+    const ok=await post(payload);
     if(ok){setModal("customer");toast(`${labelForMode(mode)} saved`);}
   };
 
   const toggleReminder = async (reminder:Reminder) => {
     const completed=!Boolean(reminder.completed);
-    try { await fetch("/api/crm",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({entity:"reminder",id:reminder.id,completed})}); } catch {}
-    setData(current=>({...current,reminders:current.reminders.map(item=>item.id===reminder.id?{...item,completed:completed?1:0,completed_at:completed?new Date().toISOString():null}:item)}));
-    toast(completed?"Follow-up completed":"Follow-up reopened");
+    try { const response=await fetch("/api/crm",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({entity:"reminder",id:reminder.id,completed})}); const body=await response.json() as {error?:string}; if(!response.ok)throw new Error(body.error||"Could not update follow-up"); await loadData(); toast(completed?"Follow-up completed":"Follow-up reopened"); } catch(error) { toast(error instanceof Error?error.message:"Could not update follow-up"); }
   };
 
   const resolveFeedback = async (item:Feedback) => {
-    try { await fetch("/api/crm",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({entity:"feedback",id:item.id,status:"Resolved"})}); } catch {}
-    setData(current=>({...current,feedback:current.feedback.map(entry=>entry.id===item.id?{...entry,status:"Resolved"}:entry)}));toast("Feedback marked as resolved");
+    try { const response=await fetch("/api/crm",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({entity:"feedback",id:item.id,status:"Resolved"})}); const body=await response.json() as {error?:string}; if(!response.ok)throw new Error(body.error||"Could not update feedback"); await loadData(); toast("Feedback marked as resolved"); } catch(error) { toast(error instanceof Error?error.message:"Could not update feedback"); }
   };
 
   const archiveCustomer = async (customer:Customer) => {
-    try { await fetch(`/api/crm?id=${encodeURIComponent(customer.id)}`,{method:"DELETE"}); } catch {}
-    setData(current=>({...current,customers:current.customers.filter(item=>item.id!==customer.id)}));setModal(null);toast(`${customer.name} archived`);
+    try { const response=await fetch(`/api/crm?id=${encodeURIComponent(customer.id)}`,{method:"DELETE"}); const body=await response.json() as {error?:string}; if(!response.ok)throw new Error(body.error||"Could not archive customer"); await loadData(); setModal(null); toast(`${customer.name} archived`); } catch(error) { toast(error instanceof Error?error.message:"Could not archive customer"); }
   };
 
   const exportCsv=()=>{const rows=[["Customer","Email","Status","Lifetime revenue","Last contact","Open follow-ups"],...filteredCustomers.map(customer=>[customer.name,customer.email,customer.status,(lifetimeValue(customer.id)/100).toFixed(2),interactionsFor(customer.id)[0]?.happened_at||"",String(remindersFor(customer.id).filter(item=>!Boolean(item.completed)).length)])];const csv=rows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));const link=document.createElement("a");link.href=url;link.download=`brands-republic-crm-${new Date().toISOString().slice(0,10)}.csv`;link.click();URL.revokeObjectURL(url);toast("CRM report downloaded");};
@@ -179,7 +173,7 @@ export default function Dashboard({ userName, userEmail }: { userName: string; u
     </aside>
     <main>
       <header className="topbar"><button className="menu" aria-label="Open navigation" onClick={()=>setMobileOpen(true)}><Menu size={20}/></button><div className="global-search"><Search size={17}/><input ref={searchRef} aria-label="Global search" placeholder="Search customers, remarks and emails..." value={query} onChange={event=>setQuery(event.target.value)}/><kbd><Command size={12}/> K</kbd>{query&&<button aria-label="Clear search" onClick={()=>setQuery("")}><X size={15}/></button>}</div><div className="top-actions"><button aria-label="Toggle theme" onClick={()=>setDark(!dark)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="notification" aria-label={`Notifications, ${notifications} unread`} onClick={()=>setModal("notifications")}><Bell size={18}/>{notifications>0&&<span/>}</button><button className="primary" onClick={()=>setModal("add-customer")}><Plus size={17}/>Add customer</button></div></header>
-      <div className="content crm-content"><PageHeading view={view} openCount={openReminders.length} onAdd={()=>setModal("add-customer")} onExport={exportCsv}/>{loading&&<div className="sync-line"><span/>Syncing CRM records...</div>}
+      <div className="content crm-content"><PageHeading view={view} openCount={openReminders.length} onAdd={()=>setModal("add-customer")} onExport={exportCsv}/>{loading&&<div className="sync-line"><span/>Loading secure CRM records...</div>}
         {view==="Overview"&&<Overview data={data} totalRevenue={totalRevenue} avgRating={avgRating} openReminders={openReminders} overdue={overdue} customerName={customerName} onCustomer={openCustomer} onNavigate={navigate} onToggle={toggleReminder}/>} 
         {view==="Customers"&&<CustomersView customers={filteredCustomers} query={query} status={statusFilter} setStatus={setStatusFilter} interactionsFor={interactionsFor} remindersFor={remindersFor} lifetimeValue={lifetimeValue} onOpen={openCustomer} onAdd={()=>setModal("add-customer")}/>} 
         {view==="Follow-ups"&&<FollowUps reminders={data.reminders} customers={data.customers} filter={reminderFilter} setFilter={setReminderFilter} onToggle={toggleReminder} onOpen={openCustomer} onAdd={(id)=>openRecord("reminder",id)}/>} 
@@ -205,7 +199,7 @@ export default function Dashboard({ userName, userEmail }: { userName: string; u
 
 function PageHeading({view,openCount,onAdd,onExport}:{view:View;openCount:number;onAdd:()=>void;onExport:()=>void}) { const copy:Record<View,[string,string]>={Overview:["Your relationship command centre","See conversations, follow-ups, feedback, and revenue in one place."],Customers:["Customer relationships","Every contact, comment, reminder, and transaction connected."],"Follow-ups":["Follow-up queue",`${openCount} open actions across your customer relationships.`],Feedback:["Customer feedback","Track sentiment, comments, and what needs a response."],Revenue:["Revenue records","Connect every order and payment to the customer relationship."],Analytics:["Relationship analytics","Visualise engagement, customer value, feedback, and growth."],"Data quality":["Data quality","Fix incomplete and stale relationship records before they cause problems."],Settings:["Workspace settings","Control preferences, notifications, and customer data policies."]}; return <section className="page-heading"><div><p>{view.toUpperCase()}</p><h1>{copy[view][0]}</h1><span>{copy[view][1]}</span></div><div className="heading-actions">{view==="Customers"&&<button onClick={onExport}><Download size={16}/>Export CRM</button>}{(view==="Customers"||view==="Overview")&&<button className="primary" onClick={onAdd}><Plus size={16}/>Add customer</button>}</div></section>; }
 
-function Overview({data,totalRevenue,avgRating,openReminders,overdue,customerName,onCustomer,onNavigate,onToggle}:{data:CRMData;totalRevenue:number;avgRating:number;openReminders:Reminder[];overdue:Reminder[];customerName:(id:string)=>string;onCustomer:(id:string)=>void;onNavigate:(view:View)=>void;onToggle:(r:Reminder)=>void}) { const recent=data.interactions.slice(0,4); return <><section className="metrics"><Metric label="Active customers" value={String(data.customers.length)} change="Relationship records" icon={Users} tone="blue"/><Metric label="Open follow-ups" value={String(openReminders.length)} change={`${overdue.length} overdue`} icon={CalendarClock} tone="amber" negative={overdue.length>0}/><Metric label="Recorded revenue" value={money(totalRevenue)} change="Customer lifetime value" icon={TrendingUp} tone="violet"/><Metric label="Feedback score" value={`${avgRating.toFixed(1)}/5`} change={`${data.feedback.length} responses`} icon={Star} tone="green"/></section><section className="relationship-grid"><article className="card focus-card"><CardHeader title="Today’s relationship focus" subtitle="Prioritised actions that keep customers moving"><button className="text-button" onClick={()=>onNavigate("Follow-ups")}>View all <ArrowRight size={14}/></button></CardHeader><div className="focus-list">{openReminders.slice(0,4).map(reminder=><ReminderRow key={reminder.id} reminder={reminder} customer={customerName(reminder.customer_id)} onToggle={()=>onToggle(reminder)} onOpen={()=>onCustomer(reminder.customer_id)}/>)}</div></article><article className="card pulse-card"><CardHeader title="Relationship pulse" subtitle="Live health across the CRM"/><div className="pulse-ring"><div><strong>{Math.round((data.customers.filter(c=>c.status!=="Needs review").length/data.customers.length)*100)}%</strong><span>Healthy records</span></div></div><div className="pulse-stats"><div><b>{data.interactions.length}</b><span>Conversations</span></div><div><b>{data.feedback.filter(f=>f.status==="Open").length}</b><span>Open feedback</span></div><div><b>{data.customers.filter(c=>c.status==="Returning").length}</b><span>Returning</span></div></div></article></section><section className="card recent-crm"><CardHeader title="Latest customer conversations" subtitle="What was discussed, the remarks left, and what happens next"><button className="text-button" onClick={()=>onNavigate("Customers")}>All customers <ArrowRight size={14}/></button></CardHeader><div className="conversation-list">{recent.map(item=><button key={item.id} onClick={()=>onCustomer(item.customer_id)}><ChannelIcon channel={item.channel}/><span><b>{item.summary}</b><small>{customerName(item.customer_id)} - {item.remarks}</small></span><em className={`sentiment ${item.sentiment.toLowerCase()}`}>{item.sentiment}</em><time>{shortDate(item.happened_at)}</time></button>)}</div></section></>; }
+function Overview({data,totalRevenue,avgRating,openReminders,overdue,customerName,onCustomer,onNavigate,onToggle}:{data:CRMData;totalRevenue:number;avgRating:number;openReminders:Reminder[];overdue:Reminder[];customerName:(id:string)=>string;onCustomer:(id:string)=>void;onNavigate:(view:View)=>void;onToggle:(r:Reminder)=>void}) { const recent=data.interactions.slice(0,4); const healthy=data.customers.length?Math.round((data.customers.filter(c=>c.status!=="Needs review").length/data.customers.length)*100):0; return <><section className="metrics"><Metric label="Active customers" value={String(data.customers.length)} change="Relationship records" icon={Users} tone="blue"/><Metric label="Open follow-ups" value={String(openReminders.length)} change={`${overdue.length} overdue`} icon={CalendarClock} tone="amber" negative={overdue.length>0}/><Metric label="Recorded revenue" value={money(totalRevenue)} change="Customer lifetime value" icon={TrendingUp} tone="violet"/><Metric label="Feedback score" value={`${avgRating.toFixed(1)}/5`} change={`${data.feedback.length} responses`} icon={Star} tone="green"/></section><section className="relationship-grid"><article className="card focus-card"><CardHeader title="Today’s relationship focus" subtitle="Prioritised actions that keep customers moving"><button className="text-button" onClick={()=>onNavigate("Follow-ups")}>View all <ArrowRight size={14}/></button></CardHeader><div className="focus-list">{openReminders.slice(0,4).map(reminder=><ReminderRow key={reminder.id} reminder={reminder} customer={customerName(reminder.customer_id)} onToggle={()=>onToggle(reminder)} onOpen={()=>onCustomer(reminder.customer_id)}/>)}</div></article><article className="card pulse-card"><CardHeader title="Relationship pulse" subtitle="Live health across the CRM"/><div className="pulse-ring"><div><strong>{healthy}%</strong><span>Healthy records</span></div></div><div className="pulse-stats"><div><b>{data.interactions.length}</b><span>Conversations</span></div><div><b>{data.feedback.filter(f=>f.status==="Open").length}</b><span>Open feedback</span></div><div><b>{data.customers.filter(c=>c.status==="Returning").length}</b><span>Returning</span></div></div></article></section><section className="card recent-crm"><CardHeader title="Latest customer conversations" subtitle="What was discussed, the remarks left, and what happens next"><button className="text-button" onClick={()=>onNavigate("Customers")}>All customers <ArrowRight size={14}/></button></CardHeader><div className="conversation-list">{recent.map(item=><button key={item.id} onClick={()=>onCustomer(item.customer_id)}><ChannelIcon channel={item.channel}/><span><b>{item.summary}</b><small>{customerName(item.customer_id)} - {item.remarks}</small></span><em className={`sentiment ${item.sentiment.toLowerCase()}`}>{item.sentiment}</em><time>{shortDate(item.happened_at)}</time></button>)}</div></section></>; }
 
 function CustomersView({customers,query,status,setStatus,interactionsFor,remindersFor,lifetimeValue,onOpen,onAdd}:{customers:Customer[];query:string;status:string;setStatus:(s:"All"|Status)=>void;interactionsFor:(id:string)=>Interaction[];remindersFor:(id:string)=>Reminder[];lifetimeValue:(id:string)=>number;onOpen:(id:string)=>void;onAdd:()=>void}) { return <section className="card customers-card full-page-card"><div className="toolbar"><div><b>{customers.length} customer relationships</b><span>{query?` matching “${query}”`:" with complete CRM context"}</span></div><select aria-label="Filter by relationship status" value={status} onChange={event=>setStatus(event.target.value as "All"|Status)}><option>All</option><option>Returning</option><option>One-time</option><option>Abandoned cart</option><option>Needs review</option></select></div>{customers.length?<div className="table-wrap"><table className="crm-table"><thead><tr><th>Customer</th><th>Last conversation</th><th>Next follow-up</th><th>Lifetime value</th><th>Status</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>{customers.map(customer=>{const last=interactionsFor(customer.id)[0];const next=remindersFor(customer.id).filter(item=>!Boolean(item.completed)).sort((a,b)=>a.due_at.localeCompare(b.due_at))[0];return <tr key={customer.id}><td><button className="customer" onClick={()=>onOpen(customer.id)}><Avatar name={customer.name}/><div><b>{customer.name}</b><span>{customer.email}</span></div></button></td><td><b className="table-main">{last?.summary??"No conversation yet"}</b><span className="table-sub">{last?`${last.channel} - ${shortDate(last.happened_at)}`:"Add the first note"}</span></td><td>{next?<><b className={new Date(next.due_at)<today?"overdue-text":"table-main"}>{next.title}</b><span className="table-sub">{dueLabel(next.due_at)}</span></>:<span className="table-sub">No follow-up</span>}</td><td><b className="table-main">{money(lifetimeValue(customer.id))}</b></td><td><span className={`badge ${slug(customer.status)}`}>{customer.status}</span></td><td><button className="icon-button" aria-label={`Open ${customer.name}`} onClick={()=>onOpen(customer.id)}><ArrowRight size={16}/></button></td></tr>;})}</tbody></table></div>:<EmptyState icon={Search} title="No customers found" text="Try a different search or status filter." action="Add customer" onAction={onAdd}/>}</section>; }
 

@@ -1,6 +1,6 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { boolean, index, integer, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 
-export const customers = sqliteTable("customers", {
+export const customers = pgTable("customers", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull(),
@@ -15,7 +15,7 @@ export const customers = sqliteTable("customers", {
   index("customers_status_idx").on(table.status),
 ]);
 
-export const interactions = sqliteTable("interactions", {
+export const interactions = pgTable("interactions", {
   id: text("id").primaryKey(),
   customerId: text("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
   channel: text("channel").notNull(),
@@ -27,19 +27,19 @@ export const interactions = sqliteTable("interactions", {
   createdAt: text("created_at").notNull(),
 }, (table) => [index("interactions_customer_idx").on(table.customerId), index("interactions_date_idx").on(table.happenedAt)]);
 
-export const reminders = sqliteTable("reminders", {
+export const reminders = pgTable("reminders", {
   id: text("id").primaryKey(),
   customerId: text("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   dueAt: text("due_at").notNull(),
   priority: text("priority").notNull().default("Normal"),
-  completed: integer("completed", { mode: "boolean" }).notNull().default(false),
+  completed: boolean("completed").notNull().default(false),
   completedAt: text("completed_at"),
   createdBy: text("created_by").notNull(),
   createdAt: text("created_at").notNull(),
 }, (table) => [index("reminders_customer_idx").on(table.customerId), index("reminders_due_idx").on(table.dueAt)]);
 
-export const feedback = sqliteTable("feedback", {
+export const feedback = pgTable("feedback", {
   id: text("id").primaryKey(),
   customerId: text("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
   rating: integer("rating").notNull(),
@@ -49,7 +49,7 @@ export const feedback = sqliteTable("feedback", {
   createdAt: text("created_at").notNull(),
 }, (table) => [index("feedback_customer_idx").on(table.customerId), index("feedback_status_idx").on(table.status)]);
 
-export const revenue = sqliteTable("revenue", {
+export const revenue = pgTable("revenue", {
   id: text("id").primaryKey(),
   customerId: text("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
   amountPence: integer("amount_pence").notNull(),

@@ -12,9 +12,12 @@
     "test": "node --test tests/dashboard.test.mjs",
     "check": "npm run test && npm run lint && npm run build",
     "lint": "eslint . --max-warnings=0",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/migrate-neon.mjs",
+    "db:verify": "node scripts/verify-neon.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.24.0",
     "next": "16.2.6",
@@ -23,15 +26,15 @@
     "recharts": "^3.9.2"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
-    "@cloudflare/vite-plugin": "1.37.1",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
+    "drizzle-kit": "0.31.10",
+    "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",

@@ -7,6 +7,7 @@ const pageUrl = new URL("../app/page.tsx", import.meta.url);
 const layoutUrl = new URL("../app/layout.tsx", import.meta.url);
 const cssUrl = new URL("../app/globals.css", import.meta.url);
 const schemaUrl = new URL("../db/schema.ts", import.meta.url);
+const databaseUrl = new URL("../db/index.ts", import.meta.url);
 const apiUrl = new URL("../app/api/crm/route.ts", import.meta.url);
 const hostingUrl = new URL("../.openai/hosting.json", import.meta.url);
 
@@ -19,9 +20,12 @@ test("ships the complete customer relationship workspace", async () => {
 });
 
 test("provides production persistence for every CRM record type", async () => {
-  const [schema, api, hosting] = await Promise.all([readFile(schemaUrl, "utf8"), readFile(apiUrl, "utf8"), readFile(hostingUrl, "utf8")]);
-  assert.equal(JSON.parse(hosting).d1, "DB");
-  for (const table of ["customers", "interactions", "reminders", "feedback", "revenue"]) assert.match(schema, new RegExp(`sqliteTable\\(\"${table}\"`));
+  const [schema, database, api, hosting, dashboard] = await Promise.all([readFile(schemaUrl, "utf8"), readFile(databaseUrl, "utf8"), readFile(apiUrl, "utf8"), readFile(hostingUrl, "utf8"), readFile(dashboardUrl, "utf8")]);
+  assert.equal(JSON.parse(hosting).d1, null);
+  for (const table of ["customers", "interactions", "reminders", "feedback", "revenue"]) assert.match(schema, new RegExp(`pgTable\\(\"${table}\"`));
+  assert.match(database, /@neondatabase\/serverless/);
+  assert.match(database, /DATABASE_URL/);
+  assert.doesNotMatch(dashboard, /DATABASE_URL|NEXT_PUBLIC_DATABASE_URL|VITE_DATABASE_URL/);
   assert.match(api, /export async function GET/);
   assert.match(api, /export async function POST/);
   assert.match(api, /export async function PATCH/);
