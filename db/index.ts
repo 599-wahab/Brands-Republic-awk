@@ -1,11 +1,7 @@
-import { env } from "cloudflare:workers";
 import { neon } from "@neondatabase/serverless";
 
-type RuntimeEnvironment = { DATABASE_URL?: string };
-
 export function getDatabaseUrl() {
-  const runtimeUrl = (env as unknown as RuntimeEnvironment).DATABASE_URL;
-  const url = runtimeUrl || process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not configured");
   if (!url.startsWith("postgresql://")) throw new Error("DATABASE_URL must be a PostgreSQL connection string");
   return url;

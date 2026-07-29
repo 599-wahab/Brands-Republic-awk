@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:vercel": "next build",
     "start": "vinext start",
     "test": "node --test tests/dashboard.test.mjs",
     "check": "npm run test && npm run lint && npm run build",

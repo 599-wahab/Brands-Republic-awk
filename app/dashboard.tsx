@@ -124,7 +124,7 @@ export default function Dashboard({ userName, userEmail }: { userName: string; u
   const post = async (payload:Record<string,unknown>) => {
     try {
       const response=await fetch("/api/crm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-      const body=await response.json() as {error?:string};
+      const body=await response.json() as {error?:string;id?:string};
       if(!response.ok)throw new Error(body.error||"Could not save record");
       await loadData();
       return body.id || "saved";
