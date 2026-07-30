@@ -13,6 +13,7 @@ const hostingUrl = new URL("../.openai/hosting.json", import.meta.url);
 const authUrl = new URL("../app/auth.ts", import.meta.url);
 const loginPageUrl = new URL("../app/login/page.tsx", import.meta.url);
 const loginRouteUrl = new URL("../app/api/auth/login/route.ts", import.meta.url);
+const legacyLoginUrl = new URL("../app/signin-with-chatgpt/page.tsx", import.meta.url);
 const importerUrl = new URL("../scripts/import-customers.mjs", import.meta.url);
 
 test("ships the complete customer relationship workspace", async () => {
@@ -63,6 +64,11 @@ test("supports repeatable customer spreadsheet imports without exposing data fil
   for (const field of ["fullAddress", "city", "country", "postalCode", "orderCount", "cartCount", "missingFields", "importSource"]) assert.match(schema, new RegExp(field));
   assert.match(importer, /ON CONFLICT \(email\) DO UPDATE/);
   assert.match(importer, /duplicate email addresses/);
+});
+
+test("redirects the legacy Vercel sign-in URL to the environment-backed login", async () => {
+  const source = await readFile(legacyLoginUrl, "utf8");
+  assert.match(source, /redirect\("\/login"\)/);
 });
 
 test("validates CRM input and exposes completion workflows", async () => {
