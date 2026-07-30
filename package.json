@@ -15,7 +15,8 @@
     "lint": "eslint . --max-warnings=0",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate-neon.mjs",
-    "db:verify": "node scripts/verify-neon.mjs"
+    "db:verify": "node scripts/verify-neon.mjs",
+    "db:import-customers": "node scripts/import-customers.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

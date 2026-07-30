@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getAuthenticatedUser } from "@/app/auth";
 import { getDb } from "@/db";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +11,8 @@ function db() {
 }
 
 async function actor() {
-  const user = await getChatGPTUser();
+  const user = await getAuthenticatedUser();
   if (user) return user.email;
-  if (process.env.NODE_ENV !== "production") return "local@brandsrepublic.dev";
   return null;
 }
 
@@ -34,7 +33,7 @@ export async function GET() {
   try {
     const database = db();
     const [customers, interactions, reminders, feedback, revenue] = await Promise.all([
-      database.query("SELECT * FROM customers WHERE archived_at IS NULL ORDER BY updated_at DESC", []),
+      database.query("SELECT id,name,email,phone,location,status,created_at,updated_at FROM customers WHERE archived_at IS NULL ORDER BY updated_at DESC", []),
       database.query("SELECT interactions.* FROM interactions JOIN customers ON customers.id=interactions.customer_id WHERE customers.archived_at IS NULL ORDER BY happened_at DESC", []),
       database.query("SELECT reminders.* FROM reminders JOIN customers ON customers.id=reminders.customer_id WHERE customers.archived_at IS NULL ORDER BY completed ASC, due_at ASC", []),
       database.query("SELECT feedback.* FROM feedback JOIN customers ON customers.id=feedback.customer_id WHERE customers.archived_at IS NULL ORDER BY created_at DESC", []),

@@ -10,6 +10,10 @@ const schemaUrl = new URL("../db/schema.ts", import.meta.url);
 const databaseUrl = new URL("../db/index.ts", import.meta.url);
 const apiUrl = new URL("../app/api/crm/route.ts", import.meta.url);
 const hostingUrl = new URL("../.openai/hosting.json", import.meta.url);
+const authUrl = new URL("../app/auth.ts", import.meta.url);
+const loginPageUrl = new URL("../app/login/page.tsx", import.meta.url);
+const loginRouteUrl = new URL("../app/api/auth/login/route.ts", import.meta.url);
+const importerUrl = new URL("../scripts/import-customers.mjs", import.meta.url);
 
 test("ships the complete customer relationship workspace", async () => {
   const [dashboard, layout] = await Promise.all([readFile(dashboardUrl, "utf8"), readFile(layoutUrl, "utf8")]);
@@ -32,9 +36,19 @@ test("provides production persistence for every CRM record type", async () => {
   assert.match(api, /Authentication required/);
 });
 
-test("includes accessible controls, auth gating, theme persistence, and responsive CRM layouts", async () => {
-  const [dashboard, page, css] = await Promise.all([readFile(dashboardUrl, "utf8"), readFile(pageUrl, "utf8"), readFile(cssUrl, "utf8")]);
-  assert.match(page, /requireChatGPTUser/);
+test("includes accessible controls, secure auth gating, theme persistence, and responsive CRM layouts", async () => {
+  const [dashboard, page, css, auth, loginPage, loginRoute] = await Promise.all([readFile(dashboardUrl, "utf8"), readFile(pageUrl, "utf8"), readFile(cssUrl, "utf8"), readFile(authUrl, "utf8"), readFile(loginPageUrl, "utf8"), readFile(loginRouteUrl, "utf8")]);
+  assert.match(page, /getAuthenticatedUser/);
+  assert.match(page, /redirect\("\/login"\)/);
+  assert.match(auth, /CRM_LOGIN_ID/);
+  assert.match(auth, /CRM_LOGIN_PASSWORD/);
+  assert.match(auth, /CRM_SESSION_SECRET/);
+  assert.match(auth, /crypto\.subtle/);
+  assert.match(loginRoute, /httpOnly: true/);
+  assert.match(loginRoute, /sameSite: "lax"/);
+  assert.match(loginPage, /autoComplete="username"/);
+  assert.match(loginPage, /autoComplete="current-password"/);
+  assert.match(css, /crm-login-background\.png/);
   assert.match(dashboard, /aria-label=\"Global search\"/);
   assert.match(dashboard, /aria-label=\"Toggle theme\"/);
   assert.match(dashboard, /localStorage\.setItem\(\"cop-theme\"/);
@@ -42,6 +56,13 @@ test("includes accessible controls, auth gating, theme persistence, and responsi
   assert.match(dashboard, /data-testid=\"customer-profile\"/);
   assert.match(css, /@media\(max-width:780px\)/);
   assert.match(css, /prefers-reduced-motion/);
+});
+
+test("supports repeatable customer spreadsheet imports without exposing data files", async () => {
+  const [schema, importer] = await Promise.all([readFile(schemaUrl, "utf8"), readFile(importerUrl, "utf8")]);
+  for (const field of ["fullAddress", "city", "country", "postalCode", "orderCount", "cartCount", "missingFields", "importSource"]) assert.match(schema, new RegExp(field));
+  assert.match(importer, /ON CONFLICT \(email\) DO UPDATE/);
+  assert.match(importer, /duplicate email addresses/);
 });
 
 test("validates CRM input and exposes completion workflows", async () => {

@@ -1,12 +1,13 @@
 import Dashboard from "./dashboard";
-import { getChatGPTUser, requireChatGPTUser } from "./chatgpt-auth";
+import { redirect } from "next/navigation";
+import { getAuthenticatedUser } from "./auth";
 
 export const dynamic = "force-dynamic";
 
 async function AuthenticatedDashboard() {
-  const optionalUser = await getChatGPTUser();
-  const user = optionalUser ?? (process.env.NODE_ENV === "production" ? await requireChatGPTUser("/") : null);
-  return <Dashboard userName={user?.displayName ?? "Adnan"} userEmail={user?.email ?? "local@brandsrepublic.dev"} />;
+  const user = await getAuthenticatedUser();
+  if (!user) redirect("/login");
+  return <Dashboard userName={user.displayName} userEmail={user.email} signOutUrl={user.source === "chatgpt" ? "/signout-with-chatgpt?return_to=/" : "/api/auth/logout"} />;
 }
 
 export default function Page() {
