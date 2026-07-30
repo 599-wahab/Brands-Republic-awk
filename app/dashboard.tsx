@@ -24,55 +24,17 @@ type Revenue = { id: string; customer_id: string; amount_pence: number; type: st
 type CRMData = { customers: Customer[]; interactions: Interaction[]; reminders: Reminder[]; feedback: Feedback[]; revenue: Revenue[] };
 
 const today = new Date("2026-07-29T12:00:00.000Z");
-const seed: CRMData = {
-  customers: [
-    { id:"cust-aisha",name:"Aisha Rahman",email:"aisha.rahman@example.com",phone:"+44 7700 900121",location:"London, UK",status:"Returning",created_at:"2026-01-10T09:00:00.000Z",updated_at:"2026-07-29T08:45:00.000Z" },
-    { id:"cust-james",name:"James Miller",email:"j.miller@example.com",phone:"+44 7700 900122",location:"Manchester, UK",status:"One-time",created_at:"2026-03-16T10:20:00.000Z",updated_at:"2026-07-28T15:20:00.000Z" },
-    { id:"cust-sofia",name:"Sofia Oliveira",email:"sofia.o@example.com",phone:"+351 910 000 123",location:"Lisbon, PT",status:"Abandoned cart",created_at:"2026-05-02T12:00:00.000Z",updated_at:"2026-07-27T11:10:00.000Z" },
-    { id:"cust-daniel",name:"Daniel Kim",email:"daniel.kim@example.com",phone:"+44 7700 900124",location:"Birmingham, UK",status:"Returning",created_at:"2026-02-21T14:00:00.000Z",updated_at:"2026-07-26T16:00:00.000Z" },
-    { id:"cust-layla",name:"Layla Noor",email:"layla.noor@example.com",phone:"+44 7700 900125",location:"Leeds, UK",status:"Needs review",created_at:"2026-06-11T09:30:00.000Z",updated_at:"2026-07-25T09:30:00.000Z" },
-    { id:"cust-elliot",name:"Elliot Turner",email:"elliot.t@example.com",phone:"+44 7700 900126",location:"Bristol, UK",status:"Returning",created_at:"2026-04-05T13:15:00.000Z",updated_at:"2026-07-24T13:15:00.000Z" },
-    { id:"cust-mina",name:"Mina Ahmed",email:"mina.a@example.com",phone:"+44 7700 900127",location:"Cardiff, UK",status:"One-time",created_at:"2026-06-25T10:10:00.000Z",updated_at:"2026-07-23T10:10:00.000Z" },
-  ],
-  interactions: [
-    { id:"int-1",customer_id:"cust-aisha",channel:"Call",summary:"Discussed autumn collection reorder",remarks:"Aisha liked the new colour range and expects approval by Friday. Follow up with the wholesale price sheet.",sentiment:"Positive",happened_at:"2026-07-29T08:45:00.000Z",created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-29T08:47:00.000Z" },
-    { id:"int-2",customer_id:"cust-james",channel:"Email",summary:"Shared delivery update",remarks:"Confirmed the Manchester delivery window. No action unless the courier schedule changes.",sentiment:"Neutral",happened_at:"2026-07-28T15:20:00.000Z",created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-28T15:22:00.000Z" },
-    { id:"int-3",customer_id:"cust-sofia",channel:"WhatsApp",summary:"Asked about abandoned basket",remarks:"Customer is still interested but wants sizing details before completing checkout.",sentiment:"Positive",happened_at:"2026-07-27T11:10:00.000Z",created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-27T11:12:00.000Z" },
-    { id:"int-4",customer_id:"cust-daniel",channel:"Meeting",summary:"Quarterly account review",remarks:"Strong performance this quarter. Discussed increasing order volume for September.",sentiment:"Positive",happened_at:"2026-07-26T16:00:00.000Z",created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-26T16:30:00.000Z" },
-    { id:"int-5",customer_id:"cust-layla",channel:"Call",summary:"Could not confirm contact details",remarks:"Phone number may be outdated. Verify details before the next campaign.",sentiment:"Negative",happened_at:"2026-07-25T09:30:00.000Z",created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-25T09:35:00.000Z" },
-  ],
-  reminders: [
-    { id:"rem-1",customer_id:"cust-aisha",title:"Send wholesale price sheet",due_at:"2026-07-30T09:00:00.000Z",priority:"High",completed:0,completed_at:null,created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-29T08:48:00.000Z" },
-    { id:"rem-2",customer_id:"cust-sofia",title:"Send sizing guide and checkout link",due_at:"2026-07-29T15:00:00.000Z",priority:"High",completed:0,completed_at:null,created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-27T11:13:00.000Z" },
-    { id:"rem-3",customer_id:"cust-daniel",title:"Prepare September volume proposal",due_at:"2026-08-03T10:00:00.000Z",priority:"Normal",completed:0,completed_at:null,created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-26T16:35:00.000Z" },
-    { id:"rem-4",customer_id:"cust-layla",title:"Verify phone and email details",due_at:"2026-07-28T09:00:00.000Z",priority:"High",completed:0,completed_at:null,created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-25T09:36:00.000Z" },
-    { id:"rem-5",customer_id:"cust-james",title:"Confirm delivery completed",due_at:"2026-07-29T12:00:00.000Z",priority:"Normal",completed:1,completed_at:"2026-07-29T11:00:00.000Z",created_by:"adnan@brandsrepublic.co.uk",created_at:"2026-07-28T15:23:00.000Z" },
-  ],
-  feedback: [
-    { id:"feed-1",customer_id:"cust-aisha",rating:5,category:"Product",comment:"Excellent new collection and very helpful account support.",status:"Open",created_at:"2026-07-28T12:00:00.000Z" },
-    { id:"feed-2",customer_id:"cust-james",rating:4,category:"Delivery",comment:"Delivery communication was good, though the original estimate changed.",status:"Open",created_at:"2026-07-27T17:30:00.000Z" },
-    { id:"feed-3",customer_id:"cust-sofia",rating:3,category:"Website",comment:"Sizing information was difficult to find during checkout.",status:"Open",created_at:"2026-07-27T11:05:00.000Z" },
-    { id:"feed-4",customer_id:"cust-daniel",rating:5,category:"Service",comment:"Quarterly account review was clear and useful.",status:"Resolved",created_at:"2026-07-26T17:10:00.000Z" },
-  ],
-  revenue: [
-    { id:"rev-1",customer_id:"cust-aisha",amount_pence:184500,type:"Wholesale order",reference:"BR-1048",note:"Autumn collection deposit",occurred_at:"2026-07-24T10:00:00.000Z",created_at:"2026-07-24T10:00:00.000Z" },
-    { id:"rev-2",customer_id:"cust-james",amount_pence:8420,type:"Online order",reference:"WEB-8821",note:"",occurred_at:"2026-07-22T14:20:00.000Z",created_at:"2026-07-22T14:20:00.000Z" },
-    { id:"rev-3",customer_id:"cust-daniel",amount_pence:325000,type:"Wholesale order",reference:"BR-1039",note:"Quarterly stock order",occurred_at:"2026-07-18T09:00:00.000Z",created_at:"2026-07-18T09:00:00.000Z" },
-    { id:"rev-4",customer_id:"cust-aisha",amount_pence:96000,type:"Wholesale order",reference:"BR-1027",note:"",occurred_at:"2026-06-28T11:00:00.000Z",created_at:"2026-06-28T11:00:00.000Z" },
-    { id:"rev-5",customer_id:"cust-elliot",amount_pence:12950,type:"Online order",reference:"WEB-8704",note:"",occurred_at:"2026-06-21T16:45:00.000Z",created_at:"2026-06-21T16:45:00.000Z" },
-    { id:"rev-6",customer_id:"cust-mina",amount_pence:6790,type:"Online order",reference:"WEB-8650",note:"",occurred_at:"2026-06-10T13:10:00.000Z",created_at:"2026-06-10T13:10:00.000Z" },
-  ],
-};
+const emptyCRMData: CRMData = { customers: [], interactions: [], reminders: [], feedback: [], revenue: [] };
 
 const nav: Array<[View, LucideIcon]> = [
   ["Overview",LayoutDashboard],["Customers",Users],["Follow-ups",CalendarClock],["Feedback",MessageCircle],["Revenue",CircleDollarSign],["Analytics",BarChart3],
 ];
 
 export default function Dashboard({ userName, userEmail, signOutUrl }: { userName: string; userEmail: string; signOutUrl: string }) {
-  const [data,setData] = useState<CRMData>(seed);
+  const [data,setData] = useState<CRMData>(emptyCRMData);
   const [view,setView] = useState<View>("Overview");
   const [modal,setModal] = useState<Modal>(null);
-  const [selectedId,setSelectedId] = useState("cust-aisha");
+  const [selectedId,setSelectedId] = useState("");
   const [query,setQuery] = useState("");
   const [statusFilter,setStatusFilter] = useState<"All"|Status>("All");
   const [reminderFilter,setReminderFilter] = useState<"Open"|"Completed"|"All">("Open");
@@ -173,15 +135,17 @@ export default function Dashboard({ userName, userEmail, signOutUrl }: { userNam
     </aside>
     <main>
       <header className="topbar"><button className="menu" aria-label="Open navigation" onClick={()=>setMobileOpen(true)}><Menu size={20}/></button><div className="global-search"><Search size={17}/><input ref={searchRef} aria-label="Global search" placeholder="Search customers, remarks and emails..." value={query} onChange={event=>setQuery(event.target.value)}/><kbd><Command size={12}/> K</kbd>{query&&<button aria-label="Clear search" onClick={()=>setQuery("")}><X size={15}/></button>}</div><div className="top-actions"><button aria-label="Toggle theme" onClick={()=>setDark(!dark)}>{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="notification" aria-label={`Notifications, ${notifications} unread`} onClick={()=>setModal("notifications")}><Bell size={18}/>{notifications>0&&<span/>}</button><button className="primary" onClick={()=>setModal("add-customer")}><Plus size={17}/>Add customer</button></div></header>
-      <div className="content crm-content"><PageHeading view={view} openCount={openReminders.length} onAdd={()=>setModal("add-customer")} onExport={exportCsv}/>{loading&&<div className="sync-line"><span/>Loading secure CRM records...</div>}
-        {view==="Overview"&&<Overview data={data} totalRevenue={totalRevenue} avgRating={avgRating} openReminders={openReminders} overdue={overdue} customerName={customerName} onCustomer={openCustomer} onNavigate={navigate} onToggle={toggleReminder}/>} 
-        {view==="Customers"&&<CustomersView customers={filteredCustomers} query={query} status={statusFilter} setStatus={setStatusFilter} interactionsFor={interactionsFor} remindersFor={remindersFor} lifetimeValue={lifetimeValue} onOpen={openCustomer} onAdd={()=>setModal("add-customer")}/>} 
-        {view==="Follow-ups"&&<FollowUps reminders={data.reminders} customers={data.customers} filter={reminderFilter} setFilter={setReminderFilter} onToggle={toggleReminder} onOpen={openCustomer} onAdd={(id)=>openRecord("reminder",id)}/>} 
-        {view==="Feedback"&&<FeedbackView feedback={data.feedback} customerName={customerName} avgRating={avgRating} onOpen={openCustomer} onResolve={resolveFeedback} onAdd={()=>openRecord("feedback")}/>} 
-        {view==="Revenue"&&<RevenueView revenue={data.revenue} customerName={customerName} total={totalRevenue} onOpen={openCustomer} onAdd={()=>openRecord("revenue")}/>} 
-        {view==="Analytics"&&<AnalyticsView data={data} totalRevenue={totalRevenue} avgRating={avgRating}/>} 
-        {view==="Data quality"&&<DataQuality customers={data.customers} interactions={data.interactions} reminders={data.reminders} onOpen={openCustomer}/>} 
-        {view==="Settings"&&<SettingsView onSave={()=>toast("Workspace settings saved")}/>} 
+      <div className="content crm-content" aria-busy={loading}><PageHeading view={view} openCount={openReminders.length} onAdd={()=>setModal("add-customer")} onExport={exportCsv}/>
+        {loading?<CRMInitialLoading/>:<>
+          {view==="Overview"&&<Overview data={data} totalRevenue={totalRevenue} avgRating={avgRating} openReminders={openReminders} overdue={overdue} customerName={customerName} onCustomer={openCustomer} onNavigate={navigate} onToggle={toggleReminder}/>}
+          {view==="Customers"&&<CustomersView customers={filteredCustomers} query={query} status={statusFilter} setStatus={setStatusFilter} interactionsFor={interactionsFor} remindersFor={remindersFor} lifetimeValue={lifetimeValue} onOpen={openCustomer} onAdd={()=>setModal("add-customer")}/>}
+          {view==="Follow-ups"&&<FollowUps reminders={data.reminders} customers={data.customers} filter={reminderFilter} setFilter={setReminderFilter} onToggle={toggleReminder} onOpen={openCustomer} onAdd={(id)=>openRecord("reminder",id)}/>}
+          {view==="Feedback"&&<FeedbackView feedback={data.feedback} customerName={customerName} avgRating={avgRating} onOpen={openCustomer} onResolve={resolveFeedback} onAdd={()=>openRecord("feedback")}/>}
+          {view==="Revenue"&&<RevenueView revenue={data.revenue} customerName={customerName} total={totalRevenue} onOpen={openCustomer} onAdd={()=>openRecord("revenue")}/>}
+          {view==="Analytics"&&<AnalyticsView data={data} totalRevenue={totalRevenue} avgRating={avgRating}/>}
+          {view==="Data quality"&&<DataQuality customers={data.customers} interactions={data.interactions} reminders={data.reminders} onOpen={openCustomer}/>}
+          {view==="Settings"&&<SettingsView onSave={()=>toast("Workspace settings saved")}/>}
+        </>}
         <footer><span>Brands Republic CRM</span><span>Secure workspace data - last synced just now</span></footer>
       </div>
     </main>
@@ -198,6 +162,8 @@ export default function Dashboard({ userName, userEmail, signOutUrl }: { userNam
 }
 
 function PageHeading({view,openCount,onAdd,onExport}:{view:View;openCount:number;onAdd:()=>void;onExport:()=>void}) { const copy:Record<View,[string,string]>={Overview:["Your relationship command centre","See conversations, follow-ups, feedback, and revenue in one place."],Customers:["Customer relationships","Every contact, comment, reminder, and transaction connected."],"Follow-ups":["Follow-up queue",`${openCount} open actions across your customer relationships.`],Feedback:["Customer feedback","Track sentiment, comments, and what needs a response."],Revenue:["Revenue records","Connect every order and payment to the customer relationship."],Analytics:["Relationship analytics","Visualise engagement, customer value, feedback, and growth."],"Data quality":["Data quality","Fix incomplete and stale relationship records before they cause problems."],Settings:["Workspace settings","Control preferences, notifications, and customer data policies."]}; return <section className="page-heading"><div><p>{view.toUpperCase()}</p><h1>{copy[view][0]}</h1><span>{copy[view][1]}</span></div><div className="heading-actions">{view==="Customers"&&<button onClick={onExport}><Download size={16}/>Export CRM</button>}{(view==="Customers"||view==="Overview")&&<button className="primary" onClick={onAdd}><Plus size={16}/>Add customer</button>}</div></section>; }
+
+function CRMInitialLoading() { return <section className="card crm-initial-loading" role="status" aria-live="polite"><div className="loading-orbit"><Users size={22}/></div><b>Loading customer relationships</b><span>Preparing your latest customer records, reminders, feedback, and revenue.</span><div className="loading-track"><i/></div></section>; }
 
 function Overview({data,totalRevenue,avgRating,openReminders,overdue,customerName,onCustomer,onNavigate,onToggle}:{data:CRMData;totalRevenue:number;avgRating:number;openReminders:Reminder[];overdue:Reminder[];customerName:(id:string)=>string;onCustomer:(id:string)=>void;onNavigate:(view:View)=>void;onToggle:(r:Reminder)=>void}) { const recent=data.interactions.slice(0,4); const healthy=data.customers.length?Math.round((data.customers.filter(c=>c.status!=="Needs review").length/data.customers.length)*100):0; return <><section className="metrics"><Metric label="Active customers" value={String(data.customers.length)} change="Relationship records" icon={Users} tone="blue"/><Metric label="Open follow-ups" value={String(openReminders.length)} change={`${overdue.length} overdue`} icon={CalendarClock} tone="amber" negative={overdue.length>0}/><Metric label="Recorded revenue" value={money(totalRevenue)} change="Customer lifetime value" icon={TrendingUp} tone="violet"/><Metric label="Feedback score" value={`${avgRating.toFixed(1)}/5`} change={`${data.feedback.length} responses`} icon={Star} tone="green"/></section><section className="relationship-grid"><article className="card focus-card"><CardHeader title="Today’s relationship focus" subtitle="Prioritised actions that keep customers moving"><button className="text-button" onClick={()=>onNavigate("Follow-ups")}>View all <ArrowRight size={14}/></button></CardHeader><div className="focus-list">{openReminders.slice(0,4).map(reminder=><ReminderRow key={reminder.id} reminder={reminder} customer={customerName(reminder.customer_id)} onToggle={()=>onToggle(reminder)} onOpen={()=>onCustomer(reminder.customer_id)}/>)}</div></article><article className="card pulse-card"><CardHeader title="Relationship pulse" subtitle="Live health across the CRM"/><div className="pulse-ring"><div><strong>{healthy}%</strong><span>Healthy records</span></div></div><div className="pulse-stats"><div><b>{data.interactions.length}</b><span>Conversations</span></div><div><b>{data.feedback.filter(f=>f.status==="Open").length}</b><span>Open feedback</span></div><div><b>{data.customers.filter(c=>c.status==="Returning").length}</b><span>Returning</span></div></div></article></section><section className="card recent-crm"><CardHeader title="Latest customer conversations" subtitle="What was discussed, the remarks left, and what happens next"><button className="text-button" onClick={()=>onNavigate("Customers")}>All customers <ArrowRight size={14}/></button></CardHeader><div className="conversation-list">{recent.map(item=><button key={item.id} onClick={()=>onCustomer(item.customer_id)}><ChannelIcon channel={item.channel}/><span><b>{item.summary}</b><small>{customerName(item.customer_id)} - {item.remarks}</small></span><em className={`sentiment ${item.sentiment.toLowerCase()}`}>{item.sentiment}</em><time>{shortDate(item.happened_at)}</time></button>)}</div></section></>; }
 

@@ -71,6 +71,13 @@ test("redirects the legacy Vercel sign-in URL to the environment-backed login", 
   assert.match(source, /redirect\("\/login"\)/);
 });
 
+test("shows a truthful loading state instead of flashing sample customer records", async () => {
+  const dashboard = await readFile(dashboardUrl, "utf8");
+  assert.match(dashboard, /useState<CRMData>\(emptyCRMData\)/);
+  assert.match(dashboard, /loading\?<CRMInitialLoading\/>/);
+  assert.doesNotMatch(dashboard, /cust-aisha|Aisha Rahman/);
+});
+
 test("validates CRM input and exposes completion workflows", async () => {
   const [dashboard, api] = await Promise.all([readFile(dashboardUrl, "utf8"), readFile(apiUrl, "utf8")]);
   assert.match(api, /Valid name, email, and status are required/);
