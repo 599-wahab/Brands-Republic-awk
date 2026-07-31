@@ -87,3 +87,43 @@ test("validates CRM input and exposes completion workflows", async () => {
   assert.match(dashboard, /Feedback marked as resolved/);
   assert.match(dashboard, /CRM report downloaded/);
 });
+
+test("supports editing and deleting every CRM entity with confirmation", async () => {
+  const [dashboard, api] = await Promise.all([readFile(dashboardUrl, "utf8"), readFile(apiUrl, "utf8")]);
+  for (const table of ["customers", "interactions", "reminders", "feedback", "revenue"]) {
+    assert.match(api, new RegExp(`UPDATE ${table}`));
+  }
+  assert.match(api, /interaction: "interactions", reminder: "reminders", feedback: "feedback", revenue: "revenue"/);
+  assert.match(api, /entity = clean\(url\.searchParams\.get\("entity"\)/);
+  assert.match(api, /Record not found/);
+  assert.match(dashboard, /function RecordActions/);
+  assert.match(dashboard, /function ConfirmDelete/);
+  assert.match(dashboard, /Save customer changes/);
+  assert.match(dashboard, /Save .* changes/);
+  assert.match(dashboard, /This action cannot be undone/);
+  assert.match(dashboard, /Archive customer/);
+});
+
+test("exposes imported customer fields and uses live dates and safe zero denominators", async () => {
+  const [dashboard, api] = await Promise.all([readFile(dashboardUrl, "utf8"), readFile(apiUrl, "utf8")]);
+  for (const field of ["full_address", "city", "country", "postal_code", "order_count", "cart_count", "missing_fields", "import_source"]) assert.match(api, new RegExp(field));
+  assert.doesNotMatch(dashboard, /2026-07-29T12:00:00/);
+  assert.match(dashboard, /data\.reminders\.length\?Math\.round/);
+  assert.match(dashboard, /customer\.name&&customer\.email&&customer\.phone&&!customer\.missing_fields/);
+});
+
+test("uses explicit customer ownership, real notifications, global relationship search, and an explainable pulse", async () => {
+  const [dashboard, api, css] = await Promise.all([readFile(dashboardUrl, "utf8"), readFile(apiUrl, "utf8"), readFile(cssUrl, "utf8")]);
+  assert.doesNotMatch(dashboard, /data\.customers\[0\]\?\.id/);
+  assert.match(dashboard, /name="customerId" value=\{customerId\}/);
+  assert.match(dashboard, /Choose a customer from the search results before saving/);
+  assert.match(api, /Choose a valid active customer/);
+  assert.match(api, /customer_id=COALESCE\(NULLIF\(\$1,''\),customer_id\)/);
+  assert.match(dashboard, /matchingRelationshipIds/);
+  assert.match(dashboard, /function GlobalSearchResults/);
+  assert.match(dashboard, /notificationCount = openReminders\.length \+ openFeedback\.length/);
+  assert.match(dashboard, /function relationshipPulse/);
+  assert.match(dashboard, /Profile completeness.*50% weight/);
+  assert.match(dashboard, /function LedgerActions/);
+  assert.match(css, /revenue-table th:last-child.*position:sticky/);
+});
